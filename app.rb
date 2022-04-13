@@ -27,8 +27,6 @@ class LecApp < Sinatra::Application
   if settings.reset_test_data then
     DB[:countdown].delete
     DB[:times].delete
-    
-    DB[:countdown].insert(:set_point => DateTime.now + 30.seconds, :active => false)
   
     DB[:times].insert(:name => "Dubs",       :duration => 183.45, :submission => DateTime.parse("4:35:16 PM, April 20, 2022"))
     DB[:times].insert(:name => "Peter Fink", :duration => 104.12, :submission => DateTime.parse("4:33:42 PM, April 20, 2022"))
@@ -36,6 +34,10 @@ class LecApp < Sinatra::Application
     DB[:times].insert(:name => "Your Mom",   :duration =>  52.56, :submission => DateTime.parse("4:32:28 PM, April 20, 2022"))
   end
 
+  if DB[:countdown].count == 0 then
+    DB[:countdown].insert(:set_point => DateTime.now + 30.seconds, :active => false)
+  end
+  
   JOIN_QR_PNG = RQRCode::QRCode.new(settings.base_url + "/participant").as_png(:size => 800)
 
   helpers do
