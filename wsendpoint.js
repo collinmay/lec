@@ -1,7 +1,11 @@
 import WebSocket, { WebSocketServer } from "ws";
 import amqp from "amqplib";
+import yaml from "yaml";
+import fs from "fs";
 
-const amqp_server = "placeholder";
+const config = yaml.parse(fs.readFileSync('./config.yml', 'utf8'));
+
+const amqp_server = config.aqmp_url;
 
 const wss_countdown   = new WebSocketServer({port: 9293});
 const wss_leaderboard = new WebSocketServer({port: 9294});

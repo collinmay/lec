@@ -3,6 +3,7 @@ require "bundler/setup"
 require "active_support" # https://github.com/rails/rails/issues/43851
 require "active_support/core_ext/numeric/time.rb" # for .seconds
 require "sinatra/base"
+require "sinatra/config_file"
 require "haml"
 require "sequel"
 require "rqrcode"
@@ -10,41 +11,32 @@ require "time"
 require "bunny"
 
 class LecApp < Sinatra::Application
-  AMQP_SERVER = "placeholder"
-  HOST = "localhost"
-  BASE_URL = "http://#{HOST}:9292"
-  WEBSOCKET_COUNTDOWN_URL = "ws://#{HOST}:9293"
-  WEBSOCKET_LEADERBOARD_URL = "ws://#{HOST}:9294"
-
-  MQ = Bunny.new(AMQP_SERVER)
+  set :reset_test_data, false
+  config_file "./config.yml"
+  
+  MQ = Bunny.new(settings.aqmp_url)
   MQ.start
   MQ_CH = MQ.create_channel
   MQ_EX_COUNTDOWN = MQ_CH.fanout("countdown", :durable => false)
   MQ_EX_LEADERBOARD = MQ_CH.fanout("leaderboard", :durable => false)
-  
-  DB = Sequel.sqlite
 
-  DB.create_table(:times) do
-    primary_key :id
-    String :name, :null => false
-    Float :duration, :null => false
-    DateTime :submission, :null => false
-    TrueClass :disqualified, :null => false, :default => false
+  Sequel.extension :migration
+  DB = Sequel.connect(settings.db_url)
+  Sequel::Migrator.run(DB, './migrations')
+  
+  if settings.reset_test_data then
+    DB[:countdown].delete
+    DB[:times].delete
+    
+    DB[:countdown].insert(:set_point => DateTime.now + 30.seconds, :active => false)
+  
+    DB[:times].insert(:name => "Dubs",       :duration => 183.45, :submission => DateTime.parse("4:35:16 PM, April 20, 2022"))
+    DB[:times].insert(:name => "Peter Fink", :duration => 104.12, :submission => DateTime.parse("4:33:42 PM, April 20, 2022"))
+    DB[:times].insert(:name => "Your Mom",   :duration =>  44.03, :submission => DateTime.parse("4:32:21 PM, April 20, 2022"), :disqualified => true)
+    DB[:times].insert(:name => "Your Mom",   :duration =>  52.56, :submission => DateTime.parse("4:32:28 PM, April 20, 2022"))
   end
 
-  DB.create_table(:countdown) do
-    DateTime :set_point, :null => false
-    TrueClass :active, :null => false
-  end
-
-  DB[:countdown].insert(:set_point => DateTime.now + 30.seconds, :active => false)
-  
-  DB[:times].insert(:name => "Dubs",       :duration => 183.45, :submission => DateTime.parse("4:35:16 PM, April 20, 2022"))
-  DB[:times].insert(:name => "Peter Fink", :duration => 104.12, :submission => DateTime.parse("4:33:42 PM, April 20, 2022"))
-  DB[:times].insert(:name => "Your Mom",   :duration =>  44.03, :submission => DateTime.parse("4:32:21 PM, April 20, 2022"), :disqualified => true)
-  DB[:times].insert(:name => "Your Mom",   :duration =>  52.56, :submission => DateTime.parse("4:32:28 PM, April 20, 2022"))
-
-  JOIN_QR_PNG = RQRCode::QRCode.new(BASE_URL + "/participant").as_png(:size => 800)
+  JOIN_QR_PNG = RQRCode::QRCode.new(settings.base_url + "/participant").as_png(:size => 800)
 
   helpers do
     def update_leaderboard
@@ -113,12 +105,12 @@ class LecApp < Sinatra::Application
   
   get "/api/ws-endpoint/participant" do
     content_type "application/json"
-    return JSON.generate({:endpoint => WEBSOCKET_COUNTDOWN_URL})
+    return JSON.generate({:endpoint => settings.ws_countdown_url})
   end
 
   get "/api/ws-endpoint/leaderboard" do
     content_type "application/json"
-    return JSON.generate({:endpoint => WEBSOCKET_LEADERBOARD_URL})
+    return JSON.generate({:endpoint => settings.ws_leaderboard_url})
   end
 
   get "/api/countdown" do

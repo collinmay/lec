@@ -17,3 +17,5 @@ gem "rqrcode", "~> 2.1"
 gem "activesupport", "~> 7.0"
 
 gem "bunny", "~> 2.19"
+
+gem "sinatra-contrib", "~> 2.2"

@@ -20,6 +20,7 @@ GEM
     i18n (1.10.0)
       concurrent-ruby (~> 1.0)
     minitest (5.15.0)
+    multi_json (1.15.0)
     mustermann (1.1.1)
       ruby2_keywords (~> 0.0.1)
     rack (2.2.3)
@@ -37,6 +38,12 @@ GEM
       mustermann (~> 1.0)
       rack (~> 2.2)
       rack-protection (= 2.2.0)
+      tilt (~> 2.0)
+    sinatra-contrib (2.2.0)
+      multi_json
+      mustermann (~> 1.0)
+      rack-protection (= 2.2.0)
+      sinatra (= 2.2.0)
       tilt (~> 2.0)
     sorted_set (1.0.3)
       rbtree
@@ -61,6 +68,7 @@ DEPENDENCIES
   rqrcode (~> 2.1)
   sequel (~> 5.55)
   sinatra (~> 2.2)
+  sinatra-contrib (~> 2.2)
   sqlite3 (~> 1.4)
   thin (~> 1.8)
 
