@@ -144,11 +144,12 @@ let timerInitializationPromise = fetch("/api/ws-endpoint/participant").then(rs =
 		ws.addEventListener("open", _ => resolve(ws));
 		ws.addEventListener("error", reject);
 	});
+}, err => {
+	window.alert("failed to determine participant websocket endpoint: " + err);
 }).then((ws) => {
 	return timerElementPromise.then(element => {
 		return new TimerWidget(element, ws);
 	});
+}, err => {
+	window.alert("failed to connect to participant websocket endpoint: " + err);
 });
-
-timerInitializationPromise.catch(e => window.alert(e));
-
