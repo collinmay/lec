@@ -1,0 +1,74 @@
+!!! html5
+%html
+  %head
+    %title LEC Competition Manager
+    %link{:href => "https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css", :rel => "stylesheet", :integrity => "sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3", :crossorigin => "anonymous"}
+  %body
+    - if error
+      %h2= error
+    .container.mt-5
+      .row
+        .col
+          .card.mb-5
+            .card-body
+              %h1.card-title Countdown & Timer
+              %p
+                Countdown currently set for
+                %code= get_countdown.strftime("%k:%M:%S %Lms %Z %P %b %-d, %Y")
+                (#{((get_countdown - DateTime.now) * 60 * 60 * 24).to_i} seconds from when this page was loaded)
+              %form{:action => "/manager/countdown/set", :method => "POST"}
+                .mb-3
+                  %input.form-control{:type => "time", :name => "set_point"}
+                .mb-3
+                  %input.btn.btn-secondary{:type => "submit", :value => "Change Start Time"}
+              .mb-3
+                %a{:href => "/manager/countdown/begin"}<
+                  %button.btn.btn-primary
+                    Begin Countdown
+                %a{:href => "/manager/countdown/cancel"}<
+                  %button.btn.btn-danger
+                    Cancel Countdown
+          .card
+            .card-body
+              %h1.card-title Leaderboard Editor
+              %a{:href => "/manager/force-leaderboard-update"}
+                %button.btn.btn-primary Force Update
+              %table.table
+                %thead
+                  %tr
+                    %th ID
+                    %th Name
+                    %th Time
+                    %th Submitted
+                    %th DQ'd?
+                    %th
+                %tbody
+                  - ds.order_by(:id).each do |row|
+                    %tr
+                      %td.align-middle
+                        %form{:action => "/manager", :method => "POST", :id => "form-#{row[:id]}"}
+                          %input{:type => "hidden", :name => "id", :value => row[:id]}
+                        = row[:id]
+                      %td.align-middle
+                        %input{:name => "name", :value => row[:name], :form => "form-#{row[:id]}"}
+                      %td.align-middle
+                        %input{:type => "number", :name => "duration", :value => row[:duration], :form => "form-#{row[:id]}", :step => "any"}
+                      %td.align-middle
+                        = row[:submission]
+                      %td.align-middle
+                        %input{:type => "checkbox", :name => "disqualified", :checked => row[:disqualified], :form => "form-#{row[:id]}", :autocomplete => "off"}
+                      %td.align-middle
+                        %input.btn.btn-outline-primary{:type => "submit", :value => "Edit", :form => "form-#{row[:id]}"}
+                  %tr
+                    %td.align-middle
+                    %td.align-middle
+                      %form{:action => "/manager", :method => "POST", :id => "form-create"}
+                        %input{:type => "hidden", :name => "id", :value => "create"}
+                        %input{:name => "name"}
+                    %td.align-middle
+                      %input{:type => "number", :name => "duration", :value => 0, :form => "form-create", :step => "any"}
+                    %td.align-middle
+                    %td.align-middle
+                      %input{:type => "checkbox", :name => "disqualified", :checked => false, :form => "form-create", :autocomplete => "off"}
+                    %td.align-middle
+                      %input.btn.btn-outline-primary{:type => "submit", :value => "Add", :form => "form-create"}

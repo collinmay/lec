@@ -1,0 +1,33 @@
+!!! html5
+%html
+  %head
+    %title LEC Competition Presenter
+    %link{:href => "https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css", :rel => "stylesheet", :integrity => "sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3", :crossorigin => "anonymous"}
+    %script{:src => "/js/leaderboard.js"}
+    %script{:src => "/js/timer.js"}
+  %body
+    .container.mt-5
+      .row
+        .col-6
+          .card.mb-4
+            .card-body
+              %h1 Timer
+              .display-1.text-center.font-monospace#timer placeholder
+          .card
+            .card-body
+              %h1 Leaderboard
+              %table.table
+                %thead
+                  %tr
+                    %th Name
+                    %th Time
+                %tbody#board-body
+                  %tr
+                    %td placeholder
+                    %td placeholder
+        .col-6
+          .card
+            .card-body
+              %h1 Join
+              .d-flex.justify-content-center
+                %img{:src => "/join.png", :style => "width: 80%;"}
