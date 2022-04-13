@@ -47,7 +47,7 @@ class LecApp < Sinatra::Application
     end
 
     def set_countdown(time)
-      DB[:countdown].update(:set_point => time)
+      DB[:countdown].update(:set_point => Time.at(time).to_datetime)
       MQ_EX_COUNTDOWN.publish("set")
     end
 
