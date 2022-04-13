@@ -19,3 +19,5 @@ gem "activesupport", "~> 7.0"
 gem "bunny", "~> 2.19"
 
 gem "sinatra-contrib", "~> 2.2"
+
+gem "mysql2", "~> 0.5.3"

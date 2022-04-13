@@ -23,6 +23,7 @@ GEM
     multi_json (1.15.0)
     mustermann (1.1.1)
       ruby2_keywords (~> 0.0.1)
+    mysql2 (0.5.3)
     rack (2.2.3)
     rack-protection (2.2.0)
       rack
@@ -65,6 +66,7 @@ DEPENDENCIES
   activesupport (~> 7.0)
   bunny (~> 2.19)
   haml (~> 5.2)
+  mysql2 (~> 0.5.3)
   rqrcode (~> 2.1)
   sequel (~> 5.55)
   sinatra (~> 2.2)
