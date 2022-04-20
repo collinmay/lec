@@ -87,6 +87,7 @@ var Synchronizer = /*#__PURE__*/function () {
         this.interval = null;
       }
 
+      this.samples = [0];
       this.isKilled = true;
     }
   }, {
@@ -98,7 +99,9 @@ var Synchronizer = /*#__PURE__*/function () {
         /* Use a random delay so if we unkill the synchronizer we don't get all clients hammering the server at the same time. */
         delayPromise(Math.random() * this.period).then(function () {
           return _this2.sample();
-        }).then(function () {
+        }).then(function (s) {
+          _this2.samples = [s]; // forget old samples
+
           _this2.isKilled = false;
         });
 
@@ -129,12 +132,15 @@ var Synchronizer = /*#__PURE__*/function () {
           return _this3.sample();
         } else {
           var midpoint = (send + recv) / 2.0;
+          var sample = rs.time - midpoint;
 
-          _this3.samples.push(rs.time - midpoint);
+          _this3.samples.push(sample);
 
           if (_this3.samples.length > _this3.maxSamples) {
             _this3.samples.shift();
           }
+
+          return sample;
         }
       });
       return this.samplerPromise;

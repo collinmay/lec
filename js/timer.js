@@ -65,6 +65,7 @@ class Synchronizer {
 	    window.clearInterval(this.interval);
 	    this.interval = null;
 	}
+	this.samples = [0];
 	this.isKilled = true;
     }
 
@@ -73,7 +74,8 @@ class Synchronizer {
 	    /* Use a random delay so if we unkill the synchronizer we don't get all clients hammering the server at the same time. */
 	    delayPromise(Math.random() * this.period)
 		.then(() => this.sample())
-		.then(() => {
+		.then((s) => {
+		    this.samples = [s]; // forget old samples
 		    this.isKilled = false;
 		});
 	    
@@ -97,11 +99,14 @@ class Synchronizer {
 		return this.sample();
 	    } else {
 		let midpoint = (send + recv) / 2.0;
-
-		this.samples.push(rs.time - midpoint);
+		let sample = rs.time - midpoint;
+		
+		this.samples.push(sample);
 		if(this.samples.length > this.maxSamples) {
 		    this.samples.shift();
 		}
+
+		return sample;
 	    }
 	});
 	return this.samplerPromise;
