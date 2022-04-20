@@ -32,6 +32,10 @@ class LecApp < Sinatra::Application
     DB[:times].insert(:name => "Peter Fink", :duration => 104.12, :submission => DateTime.parse("4:33:42 PM, April 20, 2022"))
     DB[:times].insert(:name => "Your Mom",   :duration =>  44.03, :submission => DateTime.parse("4:32:21 PM, April 20, 2022"), :disqualified => true)
     DB[:times].insert(:name => "Your Mom",   :duration =>  52.56, :submission => DateTime.parse("4:32:28 PM, April 20, 2022"))
+
+    80.times do |i|
+      DB[:times].insert(:name => "test #{i}", :duration => Random.rand(15 * 60), :submission => DateTime.parse("4:53:22 PM, April 20, 2022"))
+    end
   end
 
   if DB[:countdown].count == 0 then
