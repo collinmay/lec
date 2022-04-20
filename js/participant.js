@@ -4,7 +4,9 @@ window.addEventListener("load", () => {
 	const btn_done = document.getElementById("timer-done");
 	const btn_submit = document.getElementById("leaderboard-submit");
 	const btn_cancel = document.getElementById("leaderboard-cancel");
-	const i_duration = document.getElementById("duration");
+    const i_duration = document.getElementById("duration");
+    const i_name = document.getElementById("i-name");
+    const w_name = document.getElementById("name-warning");
 	const form = document.getElementById("timer-form");
 	
 	window.fitText(e_timer, 0.6);
@@ -13,6 +15,20 @@ window.addEventListener("load", () => {
 	timerInitializationPromise.then((timer) => {
 		let hasTimeCaptured = false;
 
+	    function updateNameWarning() {
+		if(hasTimeCaptured && i_name.value == "") {
+		    w_name.className = "small text-danger name-warning";
+		    btn_submit.disabled = true;
+		} else {
+		    w_name.className = "small text-danger name-warning invisible";
+		    btn_submit.disabled = !hasTimeCaptured;
+		}
+	    }
+
+	    updateNameWarning();
+
+	    document.addEventListener("input", updateNameWarning);
+	    
 		function captureTime() {
 			let now = Date.now() / 1000.0;
 			let duration = now - timer.setPoint;
@@ -21,16 +37,16 @@ window.addEventListener("load", () => {
 			i_duration.value = duration;
 			hasTimeCaptured = true;
 			btn_done.disabled = true;
-			btn_submit.disabled = false;
-			btn_cancel.disabled = false;
+		    btn_cancel.disabled = false;
+		    updateNameWarning();
 		}
 
 		function uncaptureTime() {
 			e_yourtime.innerText = "xx:xx";
 			hasTimeCaptured = false;
 			btn_done.disabled = timer.state != "stopwatch";
-			btn_submit.disabled = true;
-			btn_cancel.disabled = true;			
+		    btn_cancel.disabled = true;
+		    updateNameWarning();
 		}
 		
 		timer.subscribe((state) => {
@@ -49,9 +65,11 @@ window.addEventListener("load", () => {
 			uncaptureTime();
 		});
 
-		btn_submit.addEventListener("click", () => {
-			form.submit();
-			uncaptureTime();
+	 	btn_submit.addEventListener("click", () => {
+			if(hasTimeCaptured && i_name.value != "") {
+			    form.submit();
+			    uncaptureTime();
+			}
 		});
 	});
 });

@@ -25,7 +25,8 @@
                 %form#timer-form{:action => "/participant/submit", :method => "POST"}
                   .mb-3
                     %label.form-label{:for => "name"} Full Name
-                    %input.form-control{:name => "name", :autocomplete => "name"}
+                    %input.form-control#i-name{:name => "name", :autocomplete => "name"}
+                    %em.small.text-danger#name-warning You can't submit a time until you enter your name.
                   .mb-3
                     .form-label Your Time
                     .display-2.text-center.font-monospace#yourtime xx:xx

@@ -7,11 +7,26 @@ window.addEventListener("load", function () {
   var btn_submit = document.getElementById("leaderboard-submit");
   var btn_cancel = document.getElementById("leaderboard-cancel");
   var i_duration = document.getElementById("duration");
+  var i_name = document.getElementById("i-name");
+  var w_name = document.getElementById("name-warning");
   var form = document.getElementById("timer-form");
   window.fitText(e_timer, 0.6);
   window.fitText(e_yourtime, 0.6);
   timerInitializationPromise.then(function (timer) {
     var hasTimeCaptured = false;
+
+    function updateNameWarning() {
+      if (hasTimeCaptured && i_name.value == "") {
+        w_name.className = "small text-danger name-warning";
+        btn_submit.disabled = true;
+      } else {
+        w_name.className = "small text-danger name-warning invisible";
+        btn_submit.disabled = !hasTimeCaptured;
+      }
+    }
+
+    updateNameWarning();
+    document.addEventListener("input", updateNameWarning);
 
     function captureTime() {
       var now = Date.now() / 1000.0;
@@ -20,16 +35,16 @@ window.addEventListener("load", function () {
       i_duration.value = duration;
       hasTimeCaptured = true;
       btn_done.disabled = true;
-      btn_submit.disabled = false;
       btn_cancel.disabled = false;
+      updateNameWarning();
     }
 
     function uncaptureTime() {
       e_yourtime.innerText = "xx:xx";
       hasTimeCaptured = false;
       btn_done.disabled = timer.state != "stopwatch";
-      btn_submit.disabled = true;
       btn_cancel.disabled = true;
+      updateNameWarning();
     }
 
     timer.subscribe(function (state) {
@@ -46,8 +61,10 @@ window.addEventListener("load", function () {
       uncaptureTime();
     });
     btn_submit.addEventListener("click", function () {
-      form.submit();
-      uncaptureTime();
+      if (hasTimeCaptured && i_name.value != "") {
+        form.submit();
+        uncaptureTime();
+      }
     });
   });
 });
