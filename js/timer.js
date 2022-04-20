@@ -32,12 +32,19 @@ function formatForTimer(seconds, type) {
 	}
 }
 
+function delayPromise(millis) {
+    return new Promise((resolve, reject) => {
+	window.setTimeout(resolve, millis);
+    });
+}
+
 class Synchronizer {
-    constructor() {
+    constructor(period) {
 	this.samples = [];
 	this.maxSamples = 10;
 	this.isKilled = true;
 	this.interval = null;
+	this.period = period;
 
 	this.unkill();
 	this.sample().then(() => {
@@ -63,12 +70,15 @@ class Synchronizer {
 
     unkill() {
 	if(this.isKilled) {
-	    this.sample().then(() => {
-		this.isKilled = false;
-	    });
+	    /* Use a random delay so if we unkill the synchronizer we don't get all clients hammering the server at the same time. */
+	    delayPromise(Math.random() * this.period)
+		.then(() => this.sample())
+		.then(() => {
+		    this.isKilled = false;
+		});
 	    
 	    if(!this.interval) {
-		this.interval = window.setInterval(() => this.sample(), 10000);
+		this.interval = window.setInterval(() => this.sample(), this.period);
 	    }
 	}
     }
@@ -207,7 +217,7 @@ class TimerWidget {
 	}
 };
 
-let sync = new Synchronizer();
+let sync = new Synchronizer(10 * 1000);
 
 /* Open the WebSocket before fetching the setpoint so we never miss any updates. */
 let timerInitializationPromise = fetch("/api/ws-endpoint/participant").then(rs => rs.json()).then(rs => {

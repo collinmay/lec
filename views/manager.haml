@@ -30,7 +30,7 @@
             .card-body
               %h1.card-title Synchronizer
               %p
-                This is the thing that tries to keep everyone's timers synchronized, but it's possible it could mess up their timers (jumping around, being totally wrong, etc.) more than it helps. If it's causing problems, you can kill the synchronizer.
+                This is the thing that tries to keep everyone's timers synchronized, but it's possible it could mess up their timers (jumping around, being totally wrong, etc.) more than it helps. If it's causing problems, you can kill the synchronizer. Unkilling the synchronizer gradually takes effect over the course of 10 seconds to ease server load.
               %p
                 Synchronizer is currently: 
                 = sync_kill ? "killed." : "not killed."

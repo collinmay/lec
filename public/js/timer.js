@@ -45,8 +45,14 @@ function formatForTimer(seconds, type) {
   }
 }
 
+function delayPromise(millis) {
+  return new Promise(function (resolve, reject) {
+    window.setTimeout(resolve, millis);
+  });
+}
+
 var Synchronizer = /*#__PURE__*/function () {
-  function Synchronizer() {
+  function Synchronizer(period) {
     var _this = this;
 
     _classCallCheck(this, Synchronizer);
@@ -55,6 +61,7 @@ var Synchronizer = /*#__PURE__*/function () {
     this.maxSamples = 10;
     this.isKilled = true;
     this.interval = null;
+    this.period = period;
     this.unkill();
     this.sample().then(function () {
       _this.unkill();
@@ -88,14 +95,17 @@ var Synchronizer = /*#__PURE__*/function () {
       var _this2 = this;
 
       if (this.isKilled) {
-        this.sample().then(function () {
+        /* Use a random delay so if we unkill the synchronizer we don't get all clients hammering the server at the same time. */
+        delayPromise(Math.random() * this.period).then(function () {
+          return _this2.sample();
+        }).then(function () {
           _this2.isKilled = false;
         });
 
         if (!this.interval) {
           this.interval = window.setInterval(function () {
             return _this2.sample();
-          }, 10000);
+          }, this.period);
         }
       }
     }
@@ -273,7 +283,7 @@ var TimerWidget = /*#__PURE__*/function () {
 }();
 
 ;
-var sync = new Synchronizer();
+var sync = new Synchronizer(10 * 1000);
 /* Open the WebSocket before fetching the setpoint so we never miss any updates. */
 
 var timerInitializationPromise = fetch("/api/ws-endpoint/participant").then(function (rs) {
