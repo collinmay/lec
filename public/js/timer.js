@@ -192,11 +192,12 @@ var TimerWidget = /*#__PURE__*/function () {
       var _this5 = this;
 
       var now = (Date.now() + this.sync.estimateOffsetMillis()) / 1000.0;
+      this.fixState();
 
       if (this.state == "stopwatch") {
         this.element.innerText = formatForTimer(now - this.setPoint, "stopwatch");
       } else {
-        this.element.innerText = formatForTimer(this.setPoint - now, "countdown");
+        this.element.innerText = formatForTimer(Math.ceil(this.setPoint - now), "countdown");
       }
 
       if (this.active) {
@@ -212,13 +213,13 @@ var TimerWidget = /*#__PURE__*/function () {
       this.active = true;
       /* If the set point passed while we were disabled, we need to enter stopwatch state. */
 
-      this.fixState();
+      this.updateView();
     }
   }, {
     key: "remoteDisarm",
     value: function remoteDisarm() {
       this.active = false;
-      this.fixState();
+      this.updateView();
     }
   }, {
     key: "updateState",
@@ -237,44 +238,25 @@ var TimerWidget = /*#__PURE__*/function () {
   }, {
     key: "fixState",
     value: function fixState() {
-      var _this6 = this;
-
       var now = (Date.now() + this.sync.estimateOffsetMillis()) / 1000.0;
-
-      if (this.timeoutId) {
-        window.clearTimeout(this.timeoutId);
-        this.timeoutId = null;
-      }
 
       if (now > this.setPoint) {
         this.updateState("stopwatch");
       } else {
         this.updateState("countdown");
-
-        if (this.active) {
-          this.timeoutId = window.setTimeout(function () {
-            if (_this6.active) {
-              _this6.updateState("stopwatch");
-
-              _this6.timeoutId = null;
-            }
-          }, (this.setPoint - now) * 1000.0);
-        }
       }
-
-      this.updateView();
     }
   }, {
     key: "reload",
     value: function reload() {
-      var _this7 = this;
+      var _this6 = this;
 
       this.active = false;
-      reloadSetPoint().then(function (data) {
-        _this7.setPoint = data.setPoint;
-        _this7.active = data.active;
+      return reloadSetPoint().then(function (data) {
+        _this6.setPoint = data.setPoint;
+        _this6.active = data.active;
 
-        _this7.fixState();
+        _this6.updateView();
       });
     }
   }]);

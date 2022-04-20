@@ -147,11 +147,13 @@ class TimerWidget {
 
 	updateView() {
 		let now = (Date.now() + this.sync.estimateOffsetMillis()) / 1000.0;
-		
+
+	    this.fixState();
+	    
 		if(this.state == "stopwatch") {
-			this.element.innerText = formatForTimer(now - this.setPoint, "stopwatch");
+		    this.element.innerText = formatForTimer(now - this.setPoint, "stopwatch");
 		} else {
-			this.element.innerText = formatForTimer(this.setPoint - now, "countdown");
+		    this.element.innerText = formatForTimer(Math.ceil(this.setPoint - now), "countdown");
 		}
 		
 		if(this.active) {
@@ -163,12 +165,12 @@ class TimerWidget {
 	remoteArm() {
 		this.active = true;
 		/* If the set point passed while we were disabled, we need to enter stopwatch state. */
-		this.fixState();
+		this.updateView();
 	}
 
 	remoteDisarm() {
 		this.active = false;
-		this.fixState();
+		this.updateView();
 	}
 
 	updateState(newState) {
@@ -183,36 +185,20 @@ class TimerWidget {
 
 	fixState() {
 		let now = (Date.now() + this.sync.estimateOffsetMillis()) / 1000.0;
-
-		if(this.timeoutId) {
-			window.clearTimeout(this.timeoutId);
-			this.timeoutId = null;
-		}		
 		
 		if(now > this.setPoint) {
 			this.updateState("stopwatch");
 		} else {
 			this.updateState("countdown");
-
-			if(this.active) {
-				this.timeoutId = window.setTimeout(() => {
-					if(this.active) {
-						this.updateState("stopwatch");
-						this.timeoutId = null;
-					}
-				}, (this.setPoint - now) * 1000.0);
-			}
 		}
-
-		this.updateView();
 	}
 	
 	reload() {
 		this.active = false;
-		reloadSetPoint().then((data) => {
+		return reloadSetPoint().then((data) => {
 			this.setPoint = data.setPoint;
 			this.active = data.active;
-			this.fixState();			
+			this.updateView();
 		});
 	}
 };
