@@ -179,13 +179,13 @@ class LecApp < Sinatra::Application
   
   post "/manager" do
     if(params[:id] == "create") then
-      DB[:times].insert(:name => params[:name], :duration => params[:duration], :submission => DateTime.now)
+      DB[:times].insert(:name => params[:name], :duration => ((params[:duration_m].to_f * 60) + params[:duration_s].to_f), :submission => DateTime.now)
       update_leaderboard
       redirect "/manager"
     else
       num = DB[:times].where(:id => params[:id]).update(
         :name => params[:name],
-        :duration => params[:duration],
+        :duration => ((params[:duration_m].to_f * 60.0) + params[:duration_s].to_f),
         :disqualified => !!params[:disqualified])
       if(num == 0) then
         return "No such record for edit operation"

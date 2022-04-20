@@ -42,6 +42,7 @@
           .card
             .card-body
               %h1.card-title Leaderboard Editor
+              %p The leaderboard will display the fastest non-disqualified time for each name.
               %a{:href => "/manager/force-leaderboard-update"}
                 %button.btn.btn-primary Force Update
               %table.table
@@ -49,7 +50,8 @@
                   %tr
                     %th ID
                     %th Name
-                    %th Time
+                    %th Minutes
+                    %th Seconds
                     %th Submitted
                     %th DQ'd?
                     %th
@@ -63,7 +65,10 @@
                       %td.align-middle
                         %input{:name => "name", :value => row[:name], :form => "form-#{row[:id]}"}
                       %td.align-middle
-                        %input{:type => "number", :name => "duration", :value => row[:duration], :form => "form-#{row[:id]}", :step => "any"}
+                        %input{:style => "width: 5em", :type => "number", :name => "duration_m", :value => (row[:duration] / 60).floor, :form => "form-#{row[:id]}", :step => "any"}<
+                        =":"
+                      %td.align-middle
+                        %input{:style => "width: 5em", :type => "number", :name => "duration_s", :value => row[:duration] % 60.0, :form => "form-#{row[:id]}", :step => "any"}
                       %td.align-middle
                         = row[:submission]
                       %td.align-middle
@@ -77,7 +82,10 @@
                         %input{:type => "hidden", :name => "id", :value => "create"}
                         %input{:name => "name"}
                     %td.align-middle
-                      %input{:type => "number", :name => "duration", :value => 0, :form => "form-create", :step => "any"}
+                      %input{:style => "width: 5em", :type => "number", :name => "duration_m", :value => 0, :form => "form-create", :step => "any"}<
+                      =":"
+                    %td.align-middle
+                      %input{:style => "width: 5em", :type => "number", :name => "duration_s", :value => 0, :form => "form-create", :step => "any"}
                     %td.align-middle
                     %td.align-middle
                       %input{:type => "checkbox", :name => "disqualified", :checked => false, :form => "form-create", :autocomplete => "off"}
