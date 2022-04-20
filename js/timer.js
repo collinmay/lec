@@ -34,7 +34,10 @@ function formatForTimer(seconds, type) {
 
 function delayPromise(millis) {
     return new Promise((resolve, reject) => {
-	window.setTimeout(resolve, millis);
+	window.setTimeout(() => {
+	    console.log("delaypromise timeout expired");
+	    resolve();
+	}, millis);
     });
 }
 
@@ -47,9 +50,6 @@ class Synchronizer {
 	this.period = period;
 
 	this.unkill();
-	this.sample().then(() => {
-	    this.unkill();
-	});
     }
 
     estimateOffsetMillis() {
