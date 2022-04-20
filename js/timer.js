@@ -36,23 +36,52 @@ class Synchronizer {
     constructor() {
 	this.samples = [];
 	this.maxSamples = 10;
+	this.isKilled = true;
+	this.interval = null;
 
-	this.sample();
-	window.setInterval(() => this.sample(), 10000);
+	this.unkill();
+	this.sample().then(() => {
+	    this.unkill();
+	});
     }
 
-    estimateOffsetMillis() {	
-	return this.samples.reduce((a, b) => a + b, 0) / this.samples.length;
+    estimateOffsetMillis() {
+	if(this.isKilled) {
+	    return 0;
+	} else {
+	    return this.samples.reduce((a, b) => a + b, 0) / this.samples.length;
+	}
+    }
 
-	// use this if the synchronizer isn't working right to just null it out
-	//return Date.now() - performance.now();
+    kill() {
+	if(this.interval) {
+	    window.clearInterval(this.interval);
+	    this.interval = null;
+	}
+	this.isKilled = true;
+    }
+
+    unkill() {
+	if(this.isKilled) {
+	    this.sample().then(() => {
+		this.isKilled = false;
+	    });
+	    
+	    if(!this.interval) {
+		this.interval = window.setInterval(() => this.sample(), 10000);
+	    }
+	}
     }
 
     sample() {
-	let send = performance.now();
+	let send = Date.now();
 	this.samplerPromise = fetch("/api/synchronizer").then(rs => rs.json()).then(rs => {
-	    let recv = performance.now();
+	    let recv = Date.now();
 
+	    if(rs.kill) {
+		this.kill();
+	    }
+	    
 	    // 3 seconds is a pretty long RTT... something is fishy, discard the sample and retry.
 	    if(recv - send > 3000) {
 		return this.sample();
@@ -93,7 +122,11 @@ class TimerWidget {
 			} else if(msg.data == "begin") {
 				this.remoteArm();
 			} else if(msg.data == "cancel") {
-				this.remoteDisarm();
+			    this.remoteDisarm();
+			} else if(msg.data == "syncKill") {
+			    this.sync.kill();
+			} else if(msg.data == "syncUnkill") {
+			    this.sync.unkill();
 			} else {
 				window.alert("unknown command from server: " + msg.data);
 			}
@@ -103,7 +136,7 @@ class TimerWidget {
 	}
 
 	updateView() {
-		let now = (performance.now() + this.sync.estimateOffsetMillis()) / 1000.0;
+		let now = (Date.now() + this.sync.estimateOffsetMillis()) / 1000.0;
 		
 		if(this.state == "stopwatch") {
 			this.element.innerText = formatForTimer(now - this.setPoint, "stopwatch");
@@ -139,7 +172,7 @@ class TimerWidget {
 	}
 
 	fixState() {
-		let now = (performance.now() + this.sync.estimateOffsetMillis()) / 1000.0;
+		let now = (Date.now() + this.sync.estimateOffsetMillis()) / 1000.0;
 
 		if(this.timeoutId) {
 			window.clearTimeout(this.timeoutId);

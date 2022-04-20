@@ -35,7 +35,7 @@ class LecApp < Sinatra::Application
   end
 
   if DB[:countdown].count == 0 then
-    DB[:countdown].insert(:set_point => DateTime.now + 30.seconds, :active => false)
+    DB[:countdown].insert(:set_point => DateTime.now + 30.seconds, :active => false, :sync_kill => false)
   end
   
   JOIN_QR_PNG = RQRCode::QRCode.new(settings.base_url + "/participant").as_png(:size => 800)
@@ -67,6 +67,16 @@ class LecApp < Sinatra::Application
     def cancel_countdown
       DB[:countdown].update(:active => false)
       MQ_EX_COUNTDOWN.publish("cancel")
+    end
+
+    def kill_sync
+      DB[:countdown].update(:sync_kill => true)
+      MQ_EX_COUNTDOWN.publish("syncKill")
+    end
+
+    def unkill_sync
+      DB[:countdown].update(:sync_kill => false)
+      MQ_EX_COUNTDOWN.publish("syncUnkill")
     end
   end
   
@@ -123,12 +133,18 @@ class LecApp < Sinatra::Application
 
   get "/api/synchronizer" do
     content_type "application/json"
-    return JSON.generate({:time => DateTime.now.to_time.to_f * 1000.0})
+    kill = DB[:countdown].first[:sync_kill]
+    return JSON.generate(
+             {
+               :time => DateTime.now.to_time.to_f * 1000.0,
+               :kill => kill
+             })
   end
   
   get "/manager" do
     ds = DB[:times].select(:id, :name, :duration, :submission, :disqualified)
-    haml :manager, :locals => {:ds => ds, :error => nil}
+    sync_kill = DB[:countdown].first[:sync_kill]
+    haml :manager, :locals => {:ds => ds, :error => nil, :sync_kill => sync_kill}
   end
 
   get "/manager/force-leaderboard-update" do
@@ -146,6 +162,16 @@ class LecApp < Sinatra::Application
     redirect "/manager"
   end
 
+  get "/manager/sync/kill" do
+    kill_sync
+    redirect "/manager"
+  end
+  
+  get "/manager/sync/unkill" do
+    unkill_sync
+    redirect "/manager"
+  end
+  
   post "/manager/countdown/set" do
     set_countdown(Time.parse(params[:set_point]).to_i)
     redirect "/manager"

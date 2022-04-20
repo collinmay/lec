@@ -53,40 +53,77 @@ var Synchronizer = /*#__PURE__*/function () {
 
     this.samples = [];
     this.maxSamples = 10;
-    this.sample();
-    window.setInterval(function () {
-      return _this.sample();
-    }, 10000);
+    this.isKilled = true;
+    this.interval = null;
+    this.unkill();
+    this.sample().then(function () {
+      _this.unkill();
+    });
   }
 
   _createClass(Synchronizer, [{
     key: "estimateOffsetMillis",
     value: function estimateOffsetMillis() {
-      return this.samples.reduce(function (a, b) {
-        return a + b;
-      }, 0) / this.samples.length; // use this if the synchronizer isn't working right to just null it out
-      //return Date.now() - performance.now();
+      if (this.isKilled) {
+        return 0;
+      } else {
+        return this.samples.reduce(function (a, b) {
+          return a + b;
+        }, 0) / this.samples.length;
+      }
+    }
+  }, {
+    key: "kill",
+    value: function kill() {
+      if (this.interval) {
+        window.clearInterval(this.interval);
+        this.interval = null;
+      }
+
+      this.isKilled = true;
+    }
+  }, {
+    key: "unkill",
+    value: function unkill() {
+      var _this2 = this;
+
+      if (this.isKilled) {
+        this.sample().then(function () {
+          _this2.isKilled = false;
+        });
+
+        if (!this.interval) {
+          this.interval = window.setInterval(function () {
+            return _this2.sample();
+          }, 10000);
+        }
+      }
     }
   }, {
     key: "sample",
     value: function sample() {
-      var _this2 = this;
+      var _this3 = this;
 
-      var send = performance.now();
+      var send = Date.now();
       this.samplerPromise = fetch("/api/synchronizer").then(function (rs) {
         return rs.json();
       }).then(function (rs) {
-        var recv = performance.now(); // 3 seconds is a pretty long RTT... something is fishy, discard the sample and retry.
+        var recv = Date.now();
+
+        if (rs.kill) {
+          _this3.kill();
+        } // 3 seconds is a pretty long RTT... something is fishy, discard the sample and retry.
+
 
         if (recv - send > 3000) {
-          return _this2.sample();
+          return _this3.sample();
         } else {
           var midpoint = (send + recv) / 2.0;
 
-          _this2.samples.push(rs.time - midpoint);
+          _this3.samples.push(rs.time - midpoint);
 
-          if (_this2.samples.length > _this2.maxSamples) {
-            _this2.samples.shift();
+          if (_this3.samples.length > _this3.maxSamples) {
+            _this3.samples.shift();
           }
         }
       });
@@ -106,7 +143,7 @@ var TimerWidget = /*#__PURE__*/function () {
        - "stopwatch"
   */
   function TimerWidget(element, ws, sync) {
-    var _this3 = this;
+    var _this4 = this;
 
     _classCallCheck(this, TimerWidget);
 
@@ -121,13 +158,17 @@ var TimerWidget = /*#__PURE__*/function () {
 
     this.ws.addEventListener("message", function (msg) {
       if (msg.data == "set") {
-        _this3.reload()["catch"](function (e) {
+        _this4.reload()["catch"](function (e) {
           return window.alert(e);
         });
       } else if (msg.data == "begin") {
-        _this3.remoteArm();
+        _this4.remoteArm();
       } else if (msg.data == "cancel") {
-        _this3.remoteDisarm();
+        _this4.remoteDisarm();
+      } else if (msg.data == "syncKill") {
+        _this4.sync.kill();
+      } else if (msg.data == "syncUnkill") {
+        _this4.sync.unkill();
       } else {
         window.alert("unknown command from server: " + msg.data);
       }
@@ -138,9 +179,9 @@ var TimerWidget = /*#__PURE__*/function () {
   _createClass(TimerWidget, [{
     key: "updateView",
     value: function updateView() {
-      var _this4 = this;
+      var _this5 = this;
 
-      var now = (performance.now() + this.sync.estimateOffsetMillis()) / 1000.0;
+      var now = (Date.now() + this.sync.estimateOffsetMillis()) / 1000.0;
 
       if (this.state == "stopwatch") {
         this.element.innerText = formatForTimer(now - this.setPoint, "stopwatch");
@@ -151,7 +192,7 @@ var TimerWidget = /*#__PURE__*/function () {
       if (this.active) {
         /* Update us on the next animation frame */
         window.requestAnimationFrame(function () {
-          return _this4.updateView();
+          return _this5.updateView();
         });
       }
     }
@@ -186,9 +227,9 @@ var TimerWidget = /*#__PURE__*/function () {
   }, {
     key: "fixState",
     value: function fixState() {
-      var _this5 = this;
+      var _this6 = this;
 
-      var now = (performance.now() + this.sync.estimateOffsetMillis()) / 1000.0;
+      var now = (Date.now() + this.sync.estimateOffsetMillis()) / 1000.0;
 
       if (this.timeoutId) {
         window.clearTimeout(this.timeoutId);
@@ -202,10 +243,10 @@ var TimerWidget = /*#__PURE__*/function () {
 
         if (this.active) {
           this.timeoutId = window.setTimeout(function () {
-            if (_this5.active) {
-              _this5.updateState("stopwatch");
+            if (_this6.active) {
+              _this6.updateState("stopwatch");
 
-              _this5.timeoutId = null;
+              _this6.timeoutId = null;
             }
           }, (this.setPoint - now) * 1000.0);
         }
@@ -216,14 +257,14 @@ var TimerWidget = /*#__PURE__*/function () {
   }, {
     key: "reload",
     value: function reload() {
-      var _this6 = this;
+      var _this7 = this;
 
       this.active = false;
       reloadSetPoint().then(function (data) {
-        _this6.setPoint = data.setPoint;
-        _this6.active = data.active;
+        _this7.setPoint = data.setPoint;
+        _this7.active = data.active;
 
-        _this6.fixState();
+        _this7.fixState();
       });
     }
   }]);

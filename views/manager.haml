@@ -21,13 +21,24 @@
                   %input.form-control{:type => "time", :name => "set_point"}
                 .mb-3
                   %input.btn.btn-secondary{:type => "submit", :value => "Change Start Time"}
-              .mb-3
-                %a{:href => "/manager/countdown/begin"}<
-                  %button.btn.btn-primary
-                    Begin Countdown
-                %a{:href => "/manager/countdown/cancel"}<
-                  %button.btn.btn-danger
-                    Cancel Countdown
+              .mb-3.btn-group
+                %a.btn.btn-primary{:href => "/manager/countdown/begin"}<
+                  Begin
+                %a.btn.btn-danger{:href => "/manager/countdown/cancel"}<
+                  Cancel
+          .card.mb-5
+            .card-body
+              %h1.card-title Synchronizer
+              %p
+                This is the thing that tries to keep everyone's timers synchronized, but it's possible it could mess up their timers (jumping around, being totally wrong, etc.) more than it helps. If it's causing problems, you can kill the synchronizer.
+              %p
+                Synchronizer is currently: 
+                = sync_kill ? "killed." : "not killed."
+              .mb-3.btn-group
+                %a.btn.btn-primary{:href => "/manager/sync/unkill"}<
+                  Unkill
+                %a.btn.btn-danger{:href => "/manager/sync/kill"}<
+                  Kill
           .card
             .card-body
               %h1.card-title Leaderboard Editor
