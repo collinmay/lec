@@ -32,6 +32,43 @@ function formatForTimer(seconds, type) {
 	}
 }
 
+class Synchronizer {
+    constructor() {
+	this.samples = [];
+	this.maxSamples = 10;
+
+	this.sample();
+	window.setInterval(() => this.sample(), 10000);
+    }
+
+    estimateOffsetMillis() {	
+	return this.samples.reduce((a, b) => a + b, 0) / this.samples.length;
+
+	// use this if the synchronizer isn't working right to just null it out
+	//return Date.now() - performance.now();
+    }
+
+    sample() {
+	let send = performance.now();
+	this.samplerPromise = fetch("/api/synchronizer").then(rs => rs.json()).then(rs => {
+	    let recv = performance.now();
+
+	    // 3 seconds is a pretty long RTT... something is fishy, discard the sample and retry.
+	    if(recv - send > 3000) {
+		return this.sample();
+	    } else {
+		let midpoint = (send + recv) / 2.0;
+
+		this.samples.push(rs.time - midpoint);
+		if(this.samples.length > this.maxSamples) {
+		    this.samples.shift();
+		}
+	    }
+	});
+	return this.samplerPromise;
+    }
+};
+
 class TimerWidget {
 	/* Valid states:
 	     - "reset"
@@ -39,9 +76,10 @@ class TimerWidget {
 	     - "stopwatch"
 	*/
 	
-	constructor(element, ws) {
+	constructor(element, ws, sync) {
 		this.element = element;
 		this.ws = ws;
+		this.sync = sync;
 		this.state = "reset";
 		this.active = false;
 		this.setPoint = null;
@@ -65,7 +103,7 @@ class TimerWidget {
 	}
 
 	updateView() {
-		let now = Date.now() / 1000.0;
+		let now = (performance.now() + this.sync.estimateOffsetMillis()) / 1000.0;
 		
 		if(this.state == "stopwatch") {
 			this.element.innerText = formatForTimer(now - this.setPoint, "stopwatch");
@@ -101,7 +139,7 @@ class TimerWidget {
 	}
 
 	fixState() {
-		let now = Date.now() / 1000.0;
+		let now = (performance.now() + this.sync.estimateOffsetMillis()) / 1000.0;
 
 		if(this.timeoutId) {
 			window.clearTimeout(this.timeoutId);
@@ -136,6 +174,8 @@ class TimerWidget {
 	}
 };
 
+let sync = new Synchronizer();
+
 /* Open the WebSocket before fetching the setpoint so we never miss any updates. */
 let timerInitializationPromise = fetch("/api/ws-endpoint/participant").then(rs => rs.json()).then(rs => {
 	const ws = new WebSocket(rs.endpoint);
@@ -148,7 +188,7 @@ let timerInitializationPromise = fetch("/api/ws-endpoint/participant").then(rs =
 	window.alert("failed to determine participant websocket endpoint: " + err);
 }).then((ws) => {
 	return timerElementPromise.then(element => {
-		return new TimerWidget(element, ws);
+	    return new TimerWidget(element, ws, sync);
 	});
 }, err => {
 	window.alert("failed to connect to participant websocket endpoint: " + err);

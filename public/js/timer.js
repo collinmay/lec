@@ -45,19 +45,74 @@ function formatForTimer(seconds, type) {
   }
 }
 
+var Synchronizer = /*#__PURE__*/function () {
+  function Synchronizer() {
+    var _this = this;
+
+    _classCallCheck(this, Synchronizer);
+
+    this.samples = [];
+    this.maxSamples = 10;
+    this.sample();
+    window.setInterval(function () {
+      return _this.sample();
+    }, 10000);
+  }
+
+  _createClass(Synchronizer, [{
+    key: "estimateOffsetMillis",
+    value: function estimateOffsetMillis() {
+      return this.samples.reduce(function (a, b) {
+        return a + b;
+      }, 0) / this.samples.length; // use this if the synchronizer isn't working right to just null it out
+      //return Date.now() - performance.now();
+    }
+  }, {
+    key: "sample",
+    value: function sample() {
+      var _this2 = this;
+
+      var send = performance.now();
+      this.samplerPromise = fetch("/api/synchronizer").then(function (rs) {
+        return rs.json();
+      }).then(function (rs) {
+        var recv = performance.now(); // 3 seconds is a pretty long RTT... something is fishy, discard the sample and retry.
+
+        if (recv - send > 3000) {
+          return _this2.sample();
+        } else {
+          var midpoint = (send + recv) / 2.0;
+
+          _this2.samples.push(rs.time - midpoint);
+
+          if (_this2.samples.length > _this2.maxSamples) {
+            _this2.samples.shift();
+          }
+        }
+      });
+      return this.samplerPromise;
+    }
+  }]);
+
+  return Synchronizer;
+}();
+
+;
+
 var TimerWidget = /*#__PURE__*/function () {
   /* Valid states:
        - "reset"
        - "countdown"
        - "stopwatch"
   */
-  function TimerWidget(element, ws) {
-    var _this = this;
+  function TimerWidget(element, ws, sync) {
+    var _this3 = this;
 
     _classCallCheck(this, TimerWidget);
 
     this.element = element;
     this.ws = ws;
+    this.sync = sync;
     this.state = "reset";
     this.active = false;
     this.setPoint = null;
@@ -66,13 +121,13 @@ var TimerWidget = /*#__PURE__*/function () {
 
     this.ws.addEventListener("message", function (msg) {
       if (msg.data == "set") {
-        _this.reload()["catch"](function (e) {
+        _this3.reload()["catch"](function (e) {
           return window.alert(e);
         });
       } else if (msg.data == "begin") {
-        _this.remoteArm();
+        _this3.remoteArm();
       } else if (msg.data == "cancel") {
-        _this.remoteDisarm();
+        _this3.remoteDisarm();
       } else {
         window.alert("unknown command from server: " + msg.data);
       }
@@ -83,9 +138,9 @@ var TimerWidget = /*#__PURE__*/function () {
   _createClass(TimerWidget, [{
     key: "updateView",
     value: function updateView() {
-      var _this2 = this;
+      var _this4 = this;
 
-      var now = Date.now() / 1000.0;
+      var now = (performance.now() + this.sync.estimateOffsetMillis()) / 1000.0;
 
       if (this.state == "stopwatch") {
         this.element.innerText = formatForTimer(now - this.setPoint, "stopwatch");
@@ -96,7 +151,7 @@ var TimerWidget = /*#__PURE__*/function () {
       if (this.active) {
         /* Update us on the next animation frame */
         window.requestAnimationFrame(function () {
-          return _this2.updateView();
+          return _this4.updateView();
         });
       }
     }
@@ -131,9 +186,9 @@ var TimerWidget = /*#__PURE__*/function () {
   }, {
     key: "fixState",
     value: function fixState() {
-      var _this3 = this;
+      var _this5 = this;
 
-      var now = Date.now() / 1000.0;
+      var now = (performance.now() + this.sync.estimateOffsetMillis()) / 1000.0;
 
       if (this.timeoutId) {
         window.clearTimeout(this.timeoutId);
@@ -147,10 +202,10 @@ var TimerWidget = /*#__PURE__*/function () {
 
         if (this.active) {
           this.timeoutId = window.setTimeout(function () {
-            if (_this3.active) {
-              _this3.updateState("stopwatch");
+            if (_this5.active) {
+              _this5.updateState("stopwatch");
 
-              _this3.timeoutId = null;
+              _this5.timeoutId = null;
             }
           }, (this.setPoint - now) * 1000.0);
         }
@@ -161,14 +216,14 @@ var TimerWidget = /*#__PURE__*/function () {
   }, {
     key: "reload",
     value: function reload() {
-      var _this4 = this;
+      var _this6 = this;
 
       this.active = false;
       reloadSetPoint().then(function (data) {
-        _this4.setPoint = data.setPoint;
-        _this4.active = data.active;
+        _this6.setPoint = data.setPoint;
+        _this6.active = data.active;
 
-        _this4.fixState();
+        _this6.fixState();
       });
     }
   }]);
@@ -177,6 +232,7 @@ var TimerWidget = /*#__PURE__*/function () {
 }();
 
 ;
+var sync = new Synchronizer();
 /* Open the WebSocket before fetching the setpoint so we never miss any updates. */
 
 var timerInitializationPromise = fetch("/api/ws-endpoint/participant").then(function (rs) {
@@ -193,7 +249,7 @@ var timerInitializationPromise = fetch("/api/ws-endpoint/participant").then(func
   window.alert("failed to determine participant websocket endpoint: " + err);
 }).then(function (ws) {
   return timerElementPromise.then(function (element) {
-    return new TimerWidget(element, ws);
+    return new TimerWidget(element, ws, sync);
   });
 }, function (err) {
   window.alert("failed to connect to participant websocket endpoint: " + err);

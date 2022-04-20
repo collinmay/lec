@@ -121,6 +121,11 @@ class LecApp < Sinatra::Application
     return JSON.generate({:set_point => row[:set_point].to_time.to_i, :active => row[:active]})
   end
 
+  get "/api/synchronizer" do
+    content_type "application/json"
+    return JSON.generate({:time => DateTime.now.to_time.to_f * 1000.0})
+  end
+  
   get "/manager" do
     ds = DB[:times].select(:id, :name, :duration, :submission, :disqualified)
     haml :manager, :locals => {:ds => ds, :error => nil}
@@ -163,7 +168,7 @@ class LecApp < Sinatra::Application
       redirect "/manager"
     end
   end
-
+  
   get "/join.png" do
     cache_control :public, :max_age => 60 * 60, :must_revalidate => true
     content_type "image/png"
